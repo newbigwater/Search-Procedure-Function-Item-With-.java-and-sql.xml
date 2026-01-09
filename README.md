@@ -21,14 +21,6 @@ run_search.bat                   # ⭐ 메인 실행 파일 (Windows)
 └── SqlXml.csv                  # XML 파일 검색 결과
 ```
 
-### 레거시 파일 (Legacy)
-
-```
-├── search_all_items_improved.py # 개선 스크립트 (통합됨, 현재는 search_all_items.py 사용)
-├── Report2.csv                  # 이전 Java 결과 파일 (현재는 Java.csv 사용)
-└── Report3.csv                  # 이전 XML 결과 파일 (현재는 SqlXml.csv 사용)
-```
-
 **참고**: v2.1부터 모든 파일명은 `config.json` 설정을 따릅니다.
 
 ## 실행 흐름 (Execution Flow)
