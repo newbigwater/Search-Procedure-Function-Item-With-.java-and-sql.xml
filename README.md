@@ -241,7 +241,7 @@ config.json이 없으면 아래 기본값이 사용됩니다:
 - **정규식 패턴 통합** (v1.0):
   - XML 검색 패턴 중복 제거 및 통합
   - 5개 패턴 → 2개 통합 패턴으로 단순화
-  - `db_func_pattern`: dbo.FN_XXX + SCRIF.dbo.FN_XXX 통합
+  - `db_func_pattern`: dbo.FN_XXX + XXXIF.dbo.FN_XXX 통합
   - `db_proc_pattern`: EXEC/CALL 모든 변형 통합
   
 - **빠른 필터링**:
@@ -386,8 +386,8 @@ FN_CALGRADE, services/.../sql.xml, , FN_CALGRADE_MAIN, 128, "SELECT dbo.FN_..."
 - 텍스트 블록: `""" EXEC dbo.SP_XXX """`
 
 ### XML 파일
-- 함수 호출: `dbo.FN_CALGRADE_VALUETYPE(...)`, `SCRIF.dbo.FN_XXX(...)`
-- 프로시저 호출: `EXEC dbo.SP_XXX`, `CALL SCRIF.dbo.IF_XXX`
+- 함수 호출: `dbo.FN_CALGRADE_VALUETYPE(...)`, `XXXIF.dbo.FN_XXX(...)`
+- 프로시저 호출: `EXEC dbo.SP_XXX`, `CALL XXXIF.dbo.IF_XXX`
 - XML 속성: `id="IF_MES_MM_GR_RCV_CANCEL-00001"`
 - 하이픈 포함 이름: `SP_MON_MPP_PD_004_5`
 
@@ -412,8 +412,8 @@ FN_CALGRADE, services/.../sql.xml, , FN_CALGRADE_MAIN, 128, "SELECT dbo.FN_..."
 2026-01-09 15:30:00 - INFO - Date: 2026-01-09
 
 2026-01-09 15:30:00 - INFO - 설정 로드 중...
-2026-01-09 15:30:00 - INFO - 작업 디렉토리: D:\12. Projects\LS\Support\SCR\scr_2026_01_08
-2026-01-09 15:30:00 - INFO - Item List 파일: D:\12. Projects\LS\Support\SCR\scr_2026_01_08\Item List.csv
+2026-01-09 15:30:00 - INFO - 작업 디렉토리: D:\12. Projects\LS\Support\XXX\XXX_2026_01_08
+2026-01-09 15:30:00 - INFO - Item List 파일: D:\12. Projects\LS\Support\XXX\XXX_2026_01_08\Item List.csv
 
 2026-01-09 15:30:00 - INFO - 설정 검증 중...
 2026-01-09 15:30:00 - INFO - 설정 검증 완료 ✓
@@ -580,7 +580,7 @@ PermissionError: [Errno 13] Permission denied
 Procedure/Function 검색 시작
 ============================================
 실행 시간: 2026-01-09 15:30:00
-작업 디렉토리: D:\12. Projects\LS\Support\SCR\scr_2026_01_08
+작업 디렉토리: D:\12. Projects\XX\Support\XX\project
 
 2026-01-09 15:30:00 - INFO - 설정 로드 중...
 2026-01-09 15:30:00 - INFO - Item List 읽는 중...
