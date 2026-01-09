@@ -5,10 +5,10 @@ Procedure/Function 검색 스크립트 (개선 버전)
 - 검색 결과를 CSV 파일로 출력
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __author__ = "newbigwater@gmail.com"
 __date__ = "2026-01-09"
-__description__ = "Procedure/Function 검색 및 리포트 생성 도구"
+__description__ = "Procedure/Function 검색 및 리포트 생성 도구 (라인 번호 추적 기능 추가)"
 
 import csv
 import re
@@ -273,6 +273,7 @@ class JavaSearcher:
                         'file': rel_path,
                         'class': class_name,
                         'method': method_name,
+                        'line_number': i,
                         'line': line.strip()
                     })
                     
@@ -352,6 +353,7 @@ class XmlSearcher:
                             'file': rel_path,
                             'procedure': proc_name,
                             'function': func_name,
+                            'line_number': i,
                             'line': line.strip()
                         })
                         
@@ -424,15 +426,15 @@ class ReportWriter:
         try:
             with file_path.open('w', encoding=encoding, newline='', errors='replace') as f:
                 writer = csv.writer(f)
-                writer.writerow(['Procedure/Function name', '파일 경로', '클래스', '메서드', '호출한 라인 텍스트'])
+                writer.writerow(['Procedure/Function name', '파일 경로', '클래스', '메서드', '호출한 라인 번호', '호출한 라인 텍스트'])
                 
                 seen: Set[tuple] = set()
                 for r in results:
-                    key = (r['item'], r['file'], r['class'], r['method'], r['line'])
+                    key = (r['item'], r['file'], r['class'], r['method'], r['line_number'], r['line'])
                     if key not in seen:
                         seen.add(key)
                         clean_line = ReportWriter._clean_line(r['line'])
-                        writer.writerow([r['item'], r['file'], r['class'], r['method'], f'"{clean_line}"'])
+                        writer.writerow([r['item'], r['file'], r['class'], r['method'], r['line_number'], f'"{clean_line}"'])
             
             logging.info(f"java.csv 작성 완료: {len(seen)}개 항목")
             
@@ -449,15 +451,15 @@ class ReportWriter:
         try:
             with file_path.open('w', encoding=encoding, newline='', errors='replace') as f:
                 writer = csv.writer(f)
-                writer.writerow(['Procedure/Function name', '파일 경로', '프로시저명', '함수명', '호출한 라인 텍스트'])
+                writer.writerow(['Procedure/Function name', '파일 경로', '프로시저명', '함수명', '호출한 라인 번호', '호출한 라인 텍스트'])
                 
                 seen: Set[tuple] = set()
                 for r in results:
-                    key = (r['item'], r['file'], r['procedure'], r['function'], r['line'])
+                    key = (r['item'], r['file'], r['procedure'], r['function'], r['line_number'], r['line'])
                     if key not in seen:
                         seen.add(key)
                         clean_line = ReportWriter._clean_line(r['line'])
-                        writer.writerow([r['item'], r['file'], r['procedure'], r['function'], f'"{clean_line}"'])
+                        writer.writerow([r['item'], r['file'], r['procedure'], r['function'], r['line_number'], f'"{clean_line}"'])
             
             logging.info(f"SqlXml.csv 작성 완료: {len(seen)}개 항목")
             

@@ -31,6 +31,7 @@
 - ✅ 버전 정보 관리 시스템
 - ✅ 설정 검증 기능
 - ✅ 상세 통계 정보 출력
+- ✅ 라인 번호 추적 기능 (디버깅 용이)
 
 **개선 완료** (2026-01-09):
 - ✅ README.md 인코딩 정보 추가
@@ -46,6 +47,7 @@
 - ✅ UTF-8-BOM 인코딩 표준화 및 문서화
 - ✅ 복사본 파일 처리 제거 확인 완료
 - ✅ 로그 파일 자동 저장 기능 추가 (타임스탬프 기반, 듀얼 로깅)
+- ✅ **NEW**: 호출한 라인 번호 출력 기능 추가 (CSV 컬럼 추가: "호출한 라인 번호")
 
 **추가 개선 가능**:
 - ✅ 정규식 패턴 일부 중복 (낮은 우선순위) - **완료**
@@ -136,6 +138,53 @@ python search_all_items.py --log-file "%LOG_FILE%"
 - 실행 시 자동으로 로그 파일 생성 (예: `search_log_20260109_153045.txt`)
 - 콘솔과 파일에 동시 출력
 - 디버깅 및 이력 추적 용이
+
+#### ✅ 호출한 라인 번호 출력 - **완료**
+```python
+# 적용됨: JavaSearcher 및 XmlSearcher에서 라인 번호 추출
+for i, line in enumerate(lines, 1):
+    # ...검색 로직...
+    results.append({
+        'item': item_name,
+        'file': rel_path,
+        # ... 기타 필드 ...
+        'line_number': i,  # ← 새로 추가
+        'line': line.strip()
+    })
+```
+
+**구현 내용**:
+- `JavaSearcher.search()`: 라인 번호 추출 및 결과에 추가
+- `XmlSearcher.search()`: 라인 번호 추출 및 결과에 추가
+- `ReportWriter.write_java_report()`: CSV 헤더 및 출력에 "호출한 라인 번호" 컬럼 추가
+- `ReportWriter.write_xml_report()`: CSV 헤더 및 출력에 "호출한 라인 번호" 컬럼 추가
+- `clean_reports.py`: 새 컬럼 구조 자동 반영 (동적 헤더 처리)
+
+**CSV 출력 형식 변경**:
+
+**As-Is (이전)**:
+```
+Procedure/Function name, 파일 경로, 클래스, 메서드, 호출한 라인 텍스트
+Procedure/Function name, 파일 경로, 프로시저명, 함수명, 호출한 라인 텍스트
+```
+
+**To-Be (변경 후)**:
+```
+Procedure/Function name, 파일 경로, 클래스, 메서드, 호출한 라인 번호, 호출한 라인 텍스트
+Procedure/Function name, 파일 경로, 프로시저명, 함수명, 호출한 라인 번호, 호출한 라인 텍스트
+```
+
+**효과**:
+- 🎯 **디버깅 용이**: 정확한 라인 번호로 빠른 코드 찾기
+- 📍 **정확한 위치 추적**: 파일 + 라인 번호로 즉시 이동 가능
+- 🔍 **검증 개선**: 검색 결과의 정확성 확인 용이
+- 📊 **분석 향상**: 라인 번호 기반 패턴 분석 가능
+
+**예시**:
+```csv
+SP_SNAPSHOT_DAILYLOT, scheduler/.../ScheduleManager.java, ScheduleManager, run, 245, "query = EXEC SP_..."
+FN_CALGRADE, services/.../sql.xml, , FN_CALGRADE_MAIN, 128, "SELECT dbo.FN_..."
+```
 
 ---
 

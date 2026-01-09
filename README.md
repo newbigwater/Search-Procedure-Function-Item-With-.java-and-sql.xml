@@ -297,11 +297,11 @@ config.json이 없으면 아래 기본값이 사용됩니다:
 └─────────────────┘
 ```
 
-## 새로운 기능 (v1.0)
+## 새로운 기능 (v1.1)
 
 ### 1. 버전 정보 관리 ✨
 ```python
-__version__ = "1.0"
+__version__ = "1.1"
 __author__ = "newbigwater@gmail.com"
 __date__ = "2026-01-09"
 ```
@@ -356,6 +356,27 @@ search_log_20260109_153045.txt
 python search_all_items.py --log-file custom_log.txt
 ```
 
+### 6. 호출한 라인 번호 출력 ✨
+```csv
+# Java.csv 예시
+Procedure/Function name, 파일 경로, 클래스, 메서드, 호출한 라인 번호, 호출한 라인 텍스트
+SP_SNAPSHOT_DAILYLOT, scheduler/.../ScheduleManager.java, ScheduleManager, run, 245, "query = EXEC SP_..."
+
+# SqlXml.csv 예시
+Procedure/Function name, 파일 경로, 프로시저명, 함수명, 호출한 라인 번호, 호출한 라인 텍스트
+FN_CALGRADE, services/.../sql.xml, , FN_CALGRADE_MAIN, 128, "SELECT dbo.FN_..."
+```
+- CSV 출력에 "호출한 라인 번호" 컬럼 추가
+- 파일 내 정확한 위치를 라인 번호로 제공
+- 디버깅 및 코드 찾기 속도 향상
+- IDE에서 즉시 해당 라인으로 이동 가능
+
+**효과**:
+- 🎯 빠른 코드 찾기: 파일 + 라인 번호로 즉시 이동
+- 📍 정확한 위치 추적: 검색 결과의 정확한 위치 확인
+- 🔍 검증 용이: 검색 결과 재확인 시 정확성 검증
+- 📊 패턴 분석: 라인 번호 기반 사용 패턴 분석
+
 ## 검색 패턴 지원
 
 ### Java 파일
@@ -373,20 +394,20 @@ python search_all_items.py --log-file custom_log.txt
 ## 출력 형식
 
 ### Java.csv(Java 검색 결과)
-| Procedure/Function name | 파일 경로 | 클래스 | 메서드 | 호출한 라인 텍스트 |
-|------------------------|----------|--------|--------|------------------|
-| SP_SNAPSHOT_DAILYLOT | scheduler/.../ScheduleManager.java | ScheduleManager | run | "query = EXEC SP_..." |
+| Procedure/Function name | 파일 경로 | 클래스 | 메서드 | 호출한 라인 번호 | 호출한 라인 텍스트 |
+|------------------------|----------|--------|--------|----------------|------------------|
+| SP_SNAPSHOT_DAILYLOT | scheduler/.../ScheduleManager.java | ScheduleManager | run | 245 | "query = EXEC SP_..." |
 
 ### SqlXml.csv (XML 검색 결과)
-| Procedure/Function name | 파일 경로 | 프로시저명 | 함수명 | 호출한 라인 텍스트 |
-|------------------------|----------|-----------|--------|------------------|
-| FN_CALGRADE | services/.../sql.xml | | FN_CALGRADE_MAIN | "SELECT dbo.FN_..." |
+| Procedure/Function name | 파일 경로 | 프로시저명 | 함수명 | 호출한 라인 번호 | 호출한 라인 텍스트 |
+|------------------------|----------|-----------|--------|----------------|------------------|
+| FN_CALGRADE | services/.../sql.xml | | FN_CALGRADE_MAIN | 128 | "SELECT dbo.FN_..." |
 
 ## 로그 출력 예시
 
-### v1.0 (최신)
+### v1.1 (최신)
 ```
-2026-01-09 15:30:00 - INFO - search_all_items v1.0
+2026-01-09 15:30:00 - INFO - search_all_items v1.1
 2026-01-09 15:30:00 - INFO - Author: 20년차 Web 개발 전문가
 2026-01-09 15:30:00 - INFO - Date: 2026-01-09
 
@@ -607,17 +628,18 @@ Procedure/Function 검색 시작
 - 버전: 2.1.0
 - 최종 수정: 2026-01-09
 
-### 주요 변경사항 (v1.0)
+### 주요 변경사항 (v1.1)
 - ✅ config.json 기반 단일 진실 공급원(Single Source of Truth) 달성
 - ✅ 레거시 파일명 지원 제거 (Report2.csv, Report3.csv 등)
 - ✅ 코드 간결성 향상 및 유지보수성 개선
-- ✅ **NEW**: 버전 정보 관리 시스템 추가
-- ✅ **NEW**: 설정 검증 기능 (validate_config)
-- ✅ **NEW**: 진행률 % 표시 로깅
-- ✅ **NEW**: 상세 통계 정보 출력 (print_statistics)
-- ✅ **NEW**: 정규식 패턴 통합 최적화 (XML 검색 패턴 중복 제거)
-- ✅ **NEW**: UTF-8-BOM 인코딩 표준화 및 문서화
-- ✅ **NEW**: 로그 파일 자동 저장 (타임스탬프 기반, 듀얼 로깅)
+- ✅ 버전 정보 관리 시스템 추가
+- ✅ 설정 검증 기능 (validate_config)
+- ✅ 진행률 % 표시 로깅
+- ✅ 상세 통계 정보 출력 (print_statistics)
+- ✅ 정규식 패턴 통합 최적화 (XML 검색 패턴 중복 제거)
+- ✅ UTF-8-BOM 인코딩 표준화 및 문서화
+- ✅ 로그 파일 자동 저장 (타임스탬프 기반, 듀얼 로깅)
+- ✅ **NEW**: 호출한 라인 번호 출력 (CSV 컬럼 추가, 디버깅 용이)
 
 ## 주요 기능 요약
 
