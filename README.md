@@ -21,8 +21,6 @@ run_search.bat                   # ⭐ 메인 실행 파일 (Windows)
 └── SqlXml.csv                  # XML 파일 검색 결과
 ```
 
-**참고**: v2.1부터 모든 파일명은 `config.json` 설정을 따릅니다.
-
 ## 실행 흐름 (Execution Flow)
 
 ```mermaid
@@ -240,7 +238,7 @@ config.json이 없으면 아래 기본값이 사용됩니다:
   - `PatternMatcher` 클래스에서 모든 패턴 사전 컴파일
   - 반복 컴파일 오버헤드 제거
   
-- **정규식 패턴 통합** (v2.1):
+- **정규식 패턴 통합** (v1.0):
   - XML 검색 패턴 중복 제거 및 통합
   - 5개 패턴 → 2개 통합 패턴으로 단순화
   - `db_func_pattern`: dbo.FN_XXX + SCRIF.dbo.FN_XXX 통합
@@ -386,9 +384,9 @@ python search_all_items.py --log-file custom_log.txt
 
 ## 로그 출력 예시
 
-### v2.1.0 (최신)
+### v1.0 (최신)
 ```
-2026-01-09 15:30:00 - INFO - search_all_items v2.1.0
+2026-01-09 15:30:00 - INFO - search_all_items v1.0
 2026-01-09 15:30:00 - INFO - Author: 20년차 Web 개발 전문가
 2026-01-09 15:30:00 - INFO - Date: 2026-01-09
 
@@ -609,7 +607,7 @@ Procedure/Function 검색 시작
 - 버전: 2.1.0
 - 최종 수정: 2026-01-09
 
-### 주요 변경사항 (v2.1.0)
+### 주요 변경사항 (v1.0)
 - ✅ config.json 기반 단일 진실 공급원(Single Source of Truth) 달성
 - ✅ 레거시 파일명 지원 제거 (Report2.csv, Report3.csv 등)
 - ✅ 코드 간결성 향상 및 유지보수성 개선
