@@ -31,6 +31,9 @@
 - ✅ 버전 정보 관리 시스템
 - ✅ 설정 검증 기능
 - ✅ 상세 통계 정보 출력
+- ✅ 라인 번호 추적 기능 (디버깅 용이)
+- ✅ 시각적 프로그레스바 (npm 스타일, UX 향상)
+- ✅ 주석 필터링 (Java/C#/XML 주석 자동 제외)
 
 **개선 완료** (2026-01-09):
 - ✅ README.md 인코딩 정보 추가
@@ -46,6 +49,9 @@
 - ✅ UTF-8-BOM 인코딩 표준화 및 문서화
 - ✅ 복사본 파일 처리 제거 확인 완료
 - ✅ 로그 파일 자동 저장 기능 추가 (타임스탬프 기반, 듀얼 로깅)
+- ✅ 호출한 라인 번호 출력 기능 추가 (CSV 컬럼 추가: "호출한 라인 번호")
+- ✅ 시각적 프로그레스바 추가 (npm 스타일, 실시간 진행 상황 표시)
+- ✅ **NEW**: 주석 필터링 기능 추가 (Java/C#/XML 주석 자동 제외, 정확도 향상)
 
 **추가 개선 가능**:
 - ✅ 정규식 패턴 일부 중복 (낮은 우선순위) - **완료**
@@ -136,6 +142,191 @@ python search_all_items.py --log-file "%LOG_FILE%"
 - 실행 시 자동으로 로그 파일 생성 (예: `search_log_20260109_153045.txt`)
 - 콘솔과 파일에 동시 출력
 - 디버깅 및 이력 추적 용이
+
+#### ✅ 호출한 라인 번호 출력 - **완료**
+```python
+# 적용됨: JavaSearcher 및 XmlSearcher에서 라인 번호 추출
+for i, line in enumerate(lines, 1):
+    # ...검색 로직...
+    results.append({
+        'item': item_name,
+        'file': rel_path,
+        # ... 기타 필드 ...
+        'line_number': i,  # ← 새로 추가
+        'line': line.strip()
+    })
+```
+
+**구현 내용**:
+- `JavaSearcher.search()`: 라인 번호 추출 및 결과에 추가
+- `XmlSearcher.search()`: 라인 번호 추출 및 결과에 추가
+- `ReportWriter.write_java_report()`: CSV 헤더 및 출력에 "호출한 라인 번호" 컬럼 추가
+- `ReportWriter.write_xml_report()`: CSV 헤더 및 출력에 "호출한 라인 번호" 컬럼 추가
+- `clean_reports.py`: 새 컬럼 구조 자동 반영 (동적 헤더 처리)
+
+**CSV 출력 형식 변경**:
+
+**As-Is (이전)**:
+```
+Procedure/Function name, 파일 경로, 클래스, 메서드, 호출한 라인 텍스트
+Procedure/Function name, 파일 경로, 프로시저명, 함수명, 호출한 라인 텍스트
+```
+
+**To-Be (변경 후)**:
+```
+Procedure/Function name, 파일 경로, 클래스, 메서드, 호출한 라인 번호, 호출한 라인 텍스트
+Procedure/Function name, 파일 경로, 프로시저명, 함수명, 호출한 라인 번호, 호출한 라인 텍스트
+```
+
+**효과**:
+- 🎯 **디버깅 용이**: 정확한 라인 번호로 빠른 코드 찾기
+- 📍 **정확한 위치 추적**: 파일 + 라인 번호로 즉시 이동 가능
+- 🔍 **검증 개선**: 검색 결과의 정확성 확인 용이
+- 📊 **분석 향상**: 라인 번호 기반 패턴 분석 가능
+
+**예시**:
+```csv
+SP_SNAPSHOT_DAILYLOT, scheduler/.../ScheduleManager.java, ScheduleManager, run, 245, "query = EXEC SP_..."
+FN_CALGRADE, services/.../sql.xml, , FN_CALGRADE_MAIN, 128, "SELECT dbo.FN_..."
+```
+
+#### ✅ 시각적 프로그레스바 - **완료**
+```python
+# 적용됨: ProgressBar 클래스 추가 및 main()에서 사용
+class ProgressBar:
+    """순수 Python 프로그레스바 (npm 스타일)"""
+    def update(self, n: int = 1, item_name: str = ""):
+        # 진행률 바 + 시간 정보 + 항목명 표시
+        bar = '█' * filled + '░' * (self.bar_length - filled)
+        output = f"\r{self.desc}: [{bar}] {self.current}/{self.total} ({percent:.1f}%) | {elapsed_str} 경과, {eta_str} 남음 | {item_name}"
+        sys.stdout.write(output)
+        sys.stdout.flush()
+
+# main() 함수에서 사용
+progress_bar = ProgressBar(total=len(items), desc="Item 검색 중", bar_length=25)
+for idx, item in enumerate(items, 1):
+    java_results.extend(java_searcher.search(item))
+    xml_results.extend(xml_searcher.search(item))
+    progress_bar.update(n=1, item_name=item)
+progress_bar.close()
+```
+
+**구현 내용**:
+- `ProgressBar` 클래스: 순수 Python 구현 (외부 패키지 불필요)
+- 진행률 바: 25자 길이의 시각적 바 (`█` 채움, `░` 빈칸)
+- 시간 추적: 경과 시간 및 예상 남은 시간 자동 계산
+- 실시간 업데이트: 0.5초마다 자동 갱신 (깜빡임 방지)
+- 항목명 표시: 현재 처리 중인 Procedure/Function 이름 표시
+- 한 줄 출력: `\r` 사용으로 같은 줄에 업데이트 (로그 간결화)
+
+**프로그레스바 출력 예시**:
+```
+Item 검색 중: [█████████░░░░░░░░░░░░░░░░] 20/245 (8.2%) | 00:05 경과, 00:55 남음 | SP_SNAPSHOT_DAILYLOT
+Item 검색 중: [█████████████████░░░░░░░░] 40/245 (16.3%) | 00:10 경과, 00:51 남음 | FN_CALGRADE
+Item 검색 중: [█████████████████████████] 100/245 (41.2%) | 00:25 경과, 00:36 남음 | IF_MES_MM_GR_RCV
+Item 검색 중: [█████████████████████████] 245/245 (100.0%) | 01:01 경과, 00:00 남음 | SP_GET_LOTINFO
+```
+
+**효과**:
+- 📊 **시각적 진행 상황**: 한눈에 파악 가능한 진행률 바
+- ⏱️ **시간 추적**: 경과 시간 및 예상 완료 시간으로 작업 계획 용이
+- 🔄 **실시간 업데이트**: 현재 처리 중인 항목 실시간 확인
+- 💻 **깔끔한 출력**: 한 줄로 표시되어 로그 간결화
+- 🎨 **npm 스타일**: 익숙한 패키지 매니저 스타일로 UX 향상
+
+**기술적 특징**:
+- 외부 의존성 없음 (tqdm 등 불필요)
+- Windows 터미널 완벽 지원
+- 터미널 너비 자동 제한 (120자)
+- 깜빡임 방지 (0.5초 간격 업데이트)
+
+#### ✅ 주석 필터링 - **완료**
+```python
+# 적용됨: CommentDetector 클래스 추가
+class CommentDetector:
+    """주석 감지 클래스"""
+    
+    @staticmethod
+    def is_comment_line_java(line: str, in_block_comment: bool) -> tuple:
+        """Java/C# 주석 라인 감지"""
+        # 한 줄 주석: //
+        # 블록 주석: /* ... */
+        # JavaDoc: /** ... */
+        
+    @staticmethod
+    def is_comment_line_xml(line: str, in_block_comment: bool) -> tuple:
+        """XML 주석 라인 감지"""
+        # 블록 주석: <!-- ... -->
+
+# JavaSearcher에서 사용
+comment_marks = CommentDetector.mark_comment_lines_java(lines)
+for i, line in enumerate(lines, 1):
+    if comment_marks[i - 1]:  # 주석 라인 스킵
+        continue
+    # 검색 로직...
+
+# XmlSearcher에서 사용
+comment_marks = CommentDetector.mark_comment_lines_xml(lines)
+for i, line in enumerate(lines, 1):
+    if comment_marks[i - 1]:  # 주석 라인 스킵
+        continue
+    # 검색 로직...
+```
+
+**구현 내용**:
+- `CommentDetector` 클래스: 주석 감지 전담 클래스
+- `is_comment_line_java()`: Java/C# 주석 라인 감지 (한 줄, 블록, JavaDoc)
+- `is_comment_line_xml()`: XML 주석 라인 감지 (블록 주석)
+- `mark_comment_lines_java()`: 파일 전체의 주석 라인 표시
+- `mark_comment_lines_xml()`: 파일 전체의 주석 라인 표시
+- `JavaSearcher.search()`: 주석 라인 자동 제외
+- `XmlSearcher.search()`: 주석 라인 자동 제외
+
+**지원 주석 형식**:
+
+**Java/C#**:
+```java
+// 한 줄 주석 - 검색 제외
+/* 블록 주석 - 검색 제외 */
+/**
+ * JavaDoc 주석 (IF_GET_FE, IF_SET_FE) - 검색 제외
+ */
+```
+
+**XML**:
+```xml
+<!-- XML 주석 (SP_TEST, FN_EXAMPLE) - 검색 제외 -->
+```
+
+**효과**:
+- 🎯 **정확도 향상**: 실제 코드만 검색하여 오검색 제거
+- 🧹 **깔끔한 결과**: 주석 내 참조는 자동 제외
+- 📊 **신뢰성 증가**: 검색 결과의 품질 대폭 향상
+- ⚡ **자동 처리**: 별도 설정 없이 자동으로 필터링
+- 🔍 **블록 주석 추적**: 여러 줄에 걸친 주석도 정확히 감지
+
+**버그 수정**:
+- ❌ 이전: JavaDoc 주석 내 `IF_GET_FE`, `IF_SET_FE` 등이 검색 결과에 포함됨
+- ✅ 수정: 모든 주석 내용 자동 제외, 실제 코드만 검색
+
+**예시**:
+```java
+// AS-IS (버그)
+/**
+ * IF_GET_FE, IF_SET_FE Return 상태 처리  ← 이것도 검색됨 (잘못됨)
+ */
+private void outResult(String spname) {
+    executeSP("IF_GET_FE");  ← 이것만 검색되어야 함
+}
+
+// TO-BE (수정)
+/**
+ * IF_GET_FE, IF_SET_FE Return 상태 처리  ← 주석이므로 제외됨 (올바름)
+ */
+private void outResult(String spname) {
+    executeSP("IF_GET_FE");  ← 이것만 검색됨 (올바름)
+}
+```
 
 ---
 

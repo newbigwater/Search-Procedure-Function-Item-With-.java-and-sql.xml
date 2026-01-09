@@ -241,7 +241,7 @@ config.json이 없으면 아래 기본값이 사용됩니다:
 - **정규식 패턴 통합** (v1.0):
   - XML 검색 패턴 중복 제거 및 통합
   - 5개 패턴 → 2개 통합 패턴으로 단순화
-  - `db_func_pattern`: dbo.FN_XXX + SCRIF.dbo.FN_XXX 통합
+  - `db_func_pattern`: dbo.FN_XXX + XXXIF.dbo.FN_XXX 통합
   - `db_proc_pattern`: EXEC/CALL 모든 변형 통합
   
 - **빠른 필터링**:
@@ -297,11 +297,11 @@ config.json이 없으면 아래 기본값이 사용됩니다:
 └─────────────────┘
 ```
 
-## 새로운 기능 (v1.0)
+## 새로운 기능 (v1.3)
 
 ### 1. 버전 정보 관리 ✨
 ```python
-__version__ = "1.0"
+__version__ = "1.3"
 __author__ = "newbigwater@gmail.com"
 __date__ = "2026-01-09"
 ```
@@ -356,6 +356,75 @@ search_log_20260109_153045.txt
 python search_all_items.py --log-file custom_log.txt
 ```
 
+### 6. 호출한 라인 번호 출력 ✨
+```csv
+# Java.csv 예시
+Procedure/Function name, 파일 경로, 클래스, 메서드, 호출한 라인 번호, 호출한 라인 텍스트
+SP_SNAPSHOT_DAILYLOT, scheduler/.../ScheduleManager.java, ScheduleManager, run, 245, "query = EXEC SP_..."
+
+# SqlXml.csv 예시
+Procedure/Function name, 파일 경로, 프로시저명, 함수명, 호출한 라인 번호, 호출한 라인 텍스트
+FN_CALGRADE, services/.../sql.xml, , FN_CALGRADE_MAIN, 128, "SELECT dbo.FN_..."
+```
+- CSV 출력에 "호출한 라인 번호" 컬럼 추가
+- 파일 내 정확한 위치를 라인 번호로 제공
+- 디버깅 및 코드 찾기 속도 향상
+- IDE에서 즉시 해당 라인으로 이동 가능
+
+**효과**:
+- 🎯 빠른 코드 찾기: 파일 + 라인 번호로 즉시 이동
+- 📍 정확한 위치 추적: 검색 결과의 정확한 위치 확인
+- 🔍 검증 용이: 검색 결과 재확인 시 정확성 검증
+- 📊 패턴 분석: 라인 번호 기반 사용 패턴 분석
+
+### 7. 시각적 프로그레스바 ✨
+```
+Item 검색 중: [█████████████░░░░░░░░░░░░] 100/243 (41.2%) | 01:44 경과, 02:03 남음 | SP_SNAPSHOT_DAILYLOT
+```
+- npm/yarn 스타일의 실시간 프로그레스바
+- 진행률 바 (25자) + 백분율 표시
+- 경과 시간 및 예상 남은 시간 자동 계산
+- 현재 처리 중인 항목명 실시간 표시
+- 순수 Python 구현 (외부 패키지 불필요)
+
+**특징**:
+- 📊 시각적 진행 상황: 한눈에 파악 가능한 진행률
+- ⏱️ 시간 추적: 경과 시간 및 예상 완료 시간
+- 🔄 실시간 업데이트: 0.5초마다 자동 갱신
+- 💻 깔끔한 출력: 한 줄로 표시되어 로그 간결화
+
+### 8. 주석 필터링 ✨
+```java
+// Java/C# 한 줄 주석 - 검색 제외
+/* 블록 주석 - 검색 제외 */
+/**
+ * JavaDoc 주석 (IF_GET_FE, IF_SET_FE) - 검색 제외
+ */
+```
+
+```xml
+<!-- XML 주석 (SP_TEST, FN_EXAMPLE) - 검색 제외 -->
+```
+
+- Java, C#, XML 파일의 주석 내용 자동 제외
+- 한 줄 주석 (`//`) 및 블록 주석 (`/* */`, `<!-- -->`) 지원
+- JavaDoc (`/** */`) 주석도 정확히 필터링
+- 거짓 양성(False Positive) 대폭 감소
+
+**지원 주석 형식**:
+- **Java/C#**: 
+  - 한 줄 주석: `// 주석`
+  - 블록 주석: `/* 주석 */`
+  - JavaDoc: `/** 주석 */`
+- **XML**: 
+  - 블록 주석: `<!-- 주석 -->`
+
+**효과**:
+- 🎯 **정확도 향상**: 실제 코드만 검색하여 오검색 제거
+- 🧹 **깔끔한 결과**: 주석 내 참조는 자동 제외
+- 📊 **신뢰성 증가**: 검색 결과의 품질 향상
+- ⚡ **자동 처리**: 별도 설정 없이 자동으로 필터링
+
 ## 검색 패턴 지원
 
 ### Java 파일
@@ -365,34 +434,34 @@ python search_all_items.py --log-file custom_log.txt
 - 텍스트 블록: `""" EXEC dbo.SP_XXX """`
 
 ### XML 파일
-- 함수 호출: `dbo.FN_CALGRADE_VALUETYPE(...)`, `SCRIF.dbo.FN_XXX(...)`
-- 프로시저 호출: `EXEC dbo.SP_XXX`, `CALL SCRIF.dbo.IF_XXX`
+- 함수 호출: `dbo.FN_CALGRADE_VALUETYPE(...)`, `XXXIF.dbo.FN_XXX(...)`
+- 프로시저 호출: `EXEC dbo.SP_XXX`, `CALL XXXIF.dbo.IF_XXX`
 - XML 속성: `id="IF_MES_MM_GR_RCV_CANCEL-00001"`
 - 하이픈 포함 이름: `SP_MON_MPP_PD_004_5`
 
 ## 출력 형식
 
 ### Java.csv(Java 검색 결과)
-| Procedure/Function name | 파일 경로 | 클래스 | 메서드 | 호출한 라인 텍스트 |
-|------------------------|----------|--------|--------|------------------|
-| SP_SNAPSHOT_DAILYLOT | scheduler/.../ScheduleManager.java | ScheduleManager | run | "query = EXEC SP_..." |
+| Procedure/Function name | 파일 경로 | 클래스 | 메서드 | 호출한 라인 번호 | 호출한 라인 텍스트 |
+|------------------------|----------|--------|--------|----------------|------------------|
+| SP_SNAPSHOT_DAILYLOT | scheduler/.../ScheduleManager.java | ScheduleManager | run | 245 | "query = EXEC SP_..." |
 
 ### SqlXml.csv (XML 검색 결과)
-| Procedure/Function name | 파일 경로 | 프로시저명 | 함수명 | 호출한 라인 텍스트 |
-|------------------------|----------|-----------|--------|------------------|
-| FN_CALGRADE | services/.../sql.xml | | FN_CALGRADE_MAIN | "SELECT dbo.FN_..." |
+| Procedure/Function name | 파일 경로 | 프로시저명 | 함수명 | 호출한 라인 번호 | 호출한 라인 텍스트 |
+|------------------------|----------|-----------|--------|----------------|------------------|
+| FN_CALGRADE | services/.../sql.xml | | FN_CALGRADE_MAIN | 128 | "SELECT dbo.FN_..." |
 
 ## 로그 출력 예시
 
-### v1.0 (최신)
+### v1.3 (최신)
 ```
-2026-01-09 15:30:00 - INFO - search_all_items v1.0
-2026-01-09 15:30:00 - INFO - Author: 20년차 Web 개발 전문가
+2026-01-09 15:30:00 - INFO - search_all_items v1.3
+2026-01-09 15:30:00 - INFO - Author: newbigwater@gmail.com
 2026-01-09 15:30:00 - INFO - Date: 2026-01-09
 
 2026-01-09 15:30:00 - INFO - 설정 로드 중...
-2026-01-09 15:30:00 - INFO - 작업 디렉토리: D:\12. Projects\LS\Support\SCR\scr_2026_01_08
-2026-01-09 15:30:00 - INFO - Item List 파일: D:\12. Projects\LS\Support\SCR\scr_2026_01_08\Item List.csv
+2026-01-09 15:30:00 - INFO - 작업 디렉토리: D:\12. Projects\LS\Support\XXX\XXX_2026_01_08
+2026-01-09 15:30:00 - INFO - Item List 파일: D:\12. Projects\LS\Support\XXX\XXX_2026_01_08\Item List.csv
 
 2026-01-09 15:30:00 - INFO - 설정 검증 중...
 2026-01-09 15:30:00 - INFO - 설정 검증 완료 ✓
@@ -401,11 +470,12 @@ python search_all_items.py --log-file custom_log.txt
 2026-01-09 15:30:00 - INFO - 총 245개 항목 발견
 
 2026-01-09 15:30:00 - INFO - 검색 시작... (총 245개 항목)
-2026-01-09 15:30:05 - INFO - 진행 중: 20/245 (8.2%)
-2026-01-09 15:30:10 - INFO - 진행 중: 40/245 (16.3%)
-2026-01-09 15:30:15 - INFO - 진행 중: 60/245 (24.5%)
+
+Item 검색 중: [█████████░░░░░░░░░░░░░░░░] 20/245 (8.2%) | 00:05 경과, 00:55 남음 | SP_SNAPSHOT_DAILYLOT
+Item 검색 중: [█████████████████░░░░░░░░] 40/245 (16.3%) | 00:10 경과, 00:51 남음 | FN_CALGRADE
+Item 검색 중: [█████████████████████████] 100/245 (41.2%) | 00:25 경과, 00:36 남음 | IF_MES_MM_GR_RCV
 ...
-2026-01-09 15:31:00 - INFO - 진행 중: 240/245 (98.0%)
+Item 검색 중: [█████████████████████████] 245/245 (100.0%) | 01:01 경과, 00:00 남음 | SP_GET_LOTINFO
 
 2026-01-09 15:31:00 - INFO - 검색 완료!
 2026-01-09 15:31:00 - INFO - Java 결과: 51개
@@ -559,7 +629,7 @@ PermissionError: [Errno 13] Permission denied
 Procedure/Function 검색 시작
 ============================================
 실행 시간: 2026-01-09 15:30:00
-작업 디렉토리: D:\12. Projects\LS\Support\SCR\scr_2026_01_08
+작업 디렉토리: D:\12. Projects\XX\Support\XX\project
 
 2026-01-09 15:30:00 - INFO - 설정 로드 중...
 2026-01-09 15:30:00 - INFO - Item List 읽는 중...
@@ -607,17 +677,20 @@ Procedure/Function 검색 시작
 - 버전: 2.1.0
 - 최종 수정: 2026-01-09
 
-### 주요 변경사항 (v1.0)
+### 주요 변경사항 (v1.3)
 - ✅ config.json 기반 단일 진실 공급원(Single Source of Truth) 달성
 - ✅ 레거시 파일명 지원 제거 (Report2.csv, Report3.csv 등)
 - ✅ 코드 간결성 향상 및 유지보수성 개선
-- ✅ **NEW**: 버전 정보 관리 시스템 추가
-- ✅ **NEW**: 설정 검증 기능 (validate_config)
-- ✅ **NEW**: 진행률 % 표시 로깅
-- ✅ **NEW**: 상세 통계 정보 출력 (print_statistics)
-- ✅ **NEW**: 정규식 패턴 통합 최적화 (XML 검색 패턴 중복 제거)
-- ✅ **NEW**: UTF-8-BOM 인코딩 표준화 및 문서화
-- ✅ **NEW**: 로그 파일 자동 저장 (타임스탬프 기반, 듀얼 로깅)
+- ✅ 버전 정보 관리 시스템 추가
+- ✅ 설정 검증 기능 (validate_config)
+- ✅ 진행률 % 표시 로깅
+- ✅ 상세 통계 정보 출력 (print_statistics)
+- ✅ 정규식 패턴 통합 최적화 (XML 검색 패턴 중복 제거)
+- ✅ UTF-8-BOM 인코딩 표준화 및 문서화
+- ✅ 로그 파일 자동 저장 (타임스탬프 기반, 듀얼 로깅)
+- ✅ 호출한 라인 번호 출력 (CSV 컬럼 추가, 디버깅 용이)
+- ✅ 시각적 프로그레스바 (npm 스타일, 실시간 진행 상황 표시)
+- ✅ **NEW**: 주석 필터링 (Java/C#/XML 주석 자동 제외, 정확도 향상)
 
 ## 주요 기능 요약
 

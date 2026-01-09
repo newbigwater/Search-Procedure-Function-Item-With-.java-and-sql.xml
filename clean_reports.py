@@ -231,10 +231,10 @@ def clean_report3(input_file, output_file):
             header = reader.fieldnames
             
             for row in reader:
-                item_name = row['Procedure/Function name']
-                line_text = row['호출한 라인 텍스트'].strip('"')
-                proc_name = row['프로시저명']
-                func_name = row['함수명']
+                item_name = row.get('Procedure/Function name', '')
+                line_text = row.get('호출한 라인 텍스트', '').strip('"')
+                proc_name = row.get('프로시저명', '')
+                func_name = row.get('함수명', '')
                 
                 # 추출된 이름 확인
                 extracted_name = func_name if func_name else proc_name

@@ -5,10 +5,10 @@ Procedure/Function 검색 스크립트 (개선 버전)
 - 검색 결과를 CSV 파일로 출력
 """
 
-__version__ = "1.0.0"
+__version__ = "1.3.0"
 __author__ = "newbigwater@gmail.com"
 __date__ = "2026-01-09"
-__description__ = "Procedure/Function 검색 및 리포트 생성 도구"
+__description__ = "Procedure/Function 검색 및 리포트 생성 도구 (라인 번호 추적 + 프로그레스바 + 주석 필터링)"
 
 import csv
 import re
@@ -19,6 +19,7 @@ from typing import List, Dict, Set
 from dataclasses import dataclass
 import sys
 import argparse
+import time
 
 
 @dataclass
@@ -32,6 +33,100 @@ class SearchConfig:
     output_encoding: str
     xml_filters: List[str]
     skip_patterns: List[str]
+
+
+class ProgressBar:
+    """순수 Python 프로그레스바 (npm 스타일)"""
+    
+    def __init__(self, total: int, desc: str = "진행 중", bar_length: int = 25):
+        """
+        Args:
+            total: 전체 작업 수
+            desc: 작업 설명
+            bar_length: 프로그레스바 길이 (문자 수)
+        """
+        self.total = total
+        self.desc = desc
+        self.bar_length = bar_length
+        self.current = 0
+        self.start_time = time.time()
+        self.last_update = 0
+    
+    def update(self, n: int = 1, item_name: str = ""):
+        """
+        프로그레스바 업데이트
+        
+        Args:
+            n: 증가량
+            item_name: 현재 처리 중인 항목명 (선택)
+        """
+        self.current += n
+        current_time = time.time()
+        
+        # 1초에 한 번만 업데이트 (깜빡임 방지)
+        if current_time - self.last_update < 0.5 and self.current < self.total:
+            return
+        
+        self.last_update = current_time
+        self._render(item_name)
+    
+    def _render(self, item_name: str = ""):
+        """프로그레스바 렌더링"""
+        # 진행률 계산
+        progress = self.current / self.total
+        percent = progress * 100
+        
+        # 프로그레스바 생성
+        filled = int(self.bar_length * progress)
+        bar = '█' * filled + '░' * (self.bar_length - filled)
+        
+        # 경과 시간 계산
+        elapsed = time.time() - self.start_time
+        elapsed_str = self._format_time(elapsed)
+        
+        # 예상 남은 시간 계산
+        if self.current > 0:
+            eta = elapsed * (self.total - self.current) / self.current
+            eta_str = self._format_time(eta)
+        else:
+            eta_str = "--:--"
+        
+        # 항목명 표시 (짧게)
+        item_display = ""
+        if item_name:
+            max_len = 30
+            if len(item_name) > max_len:
+                item_display = f" | {item_name[:max_len-3]}..."
+            else:
+                item_display = f" | {item_name}"
+        
+        # 출력 (한 줄로)
+        output = f"\r{self.desc}: [{bar}] {self.current}/{self.total} ({percent:.1f}%) | {elapsed_str} 경과, {eta_str} 남음{item_display}"
+        
+        # 터미널 너비 제한 (120자)
+        if len(output) > 120:
+            output = output[:117] + "..."
+        
+        # 출력 (줄바꿈 없음)
+        sys.stdout.write(output)
+        sys.stdout.flush()
+        
+        # 완료 시 줄바꿈
+        if self.current >= self.total:
+            sys.stdout.write("\n")
+            sys.stdout.flush()
+    
+    def _format_time(self, seconds: float) -> str:
+        """시간 포맷팅 (mm:ss)"""
+        minutes = int(seconds // 60)
+        secs = int(seconds % 60)
+        return f"{minutes:02d}:{secs:02d}"
+    
+    def close(self):
+        """프로그레스바 종료 (완료 표시)"""
+        if self.current < self.total:
+            self.current = self.total
+            self._render()
 
 
 class ConfigManager:
@@ -232,6 +327,127 @@ class ItemListReader:
             raise
 
 
+class CommentDetector:
+    """주석 감지 클래스"""
+    
+    @staticmethod
+    def is_comment_line_java(line: str, in_block_comment: bool) -> tuple:
+        """
+        Java/C# 주석 라인 감지
+        
+        Args:
+            line: 검사할 라인
+            in_block_comment: 현재 블록 주석 내부인지 여부
+            
+        Returns:
+            (is_comment, in_block_comment) 튜플
+        """
+        stripped = line.strip()
+        
+        # 블록 주석 내부인 경우
+        if in_block_comment:
+            # 블록 주석 종료 확인
+            if '*/' in stripped:
+                in_block_comment = False
+            return (True, in_block_comment)
+        
+        # 한 줄 주석
+        if stripped.startswith('//'):
+            return (True, False)
+        
+        # 블록 주석 시작
+        if stripped.startswith('/*') or stripped.startswith('/**'):
+            # 같은 줄에 끝나는 경우
+            if '*/' in stripped:
+                return (True, False)
+            else:
+                return (True, True)
+        
+        # 코드 중간에 주석이 있는 경우 처리
+        # 예: String query = "test"; // 주석
+        if '//' in stripped:
+            # '//' 이전에 실제 코드가 있는지 확인
+            before_comment = stripped.split('//')[0].strip()
+            if before_comment:
+                # 코드가 있으면 주석 아님
+                return (False, False)
+            else:
+                return (True, False)
+        
+        return (False, False)
+    
+    @staticmethod
+    def is_comment_line_xml(line: str, in_block_comment: bool) -> tuple:
+        """
+        XML 주석 라인 감지
+        
+        Args:
+            line: 검사할 라인
+            in_block_comment: 현재 블록 주석 내부인지 여부
+            
+        Returns:
+            (is_comment, in_block_comment) 튜플
+        """
+        stripped = line.strip()
+        
+        # 블록 주석 내부인 경우
+        if in_block_comment:
+            # 블록 주석 종료 확인
+            if '-->' in stripped:
+                in_block_comment = False
+            return (True, in_block_comment)
+        
+        # 블록 주석 시작
+        if '<!--' in stripped:
+            # 같은 줄에 끝나는 경우
+            if '-->' in stripped:
+                return (True, False)
+            else:
+                return (True, True)
+        
+        return (False, False)
+    
+    @staticmethod
+    def mark_comment_lines_java(lines: List[str]) -> List[bool]:
+        """
+        Java 파일의 모든 주석 라인 표시
+        
+        Args:
+            lines: 파일의 모든 라인
+            
+        Returns:
+            주석 여부 리스트 (True: 주석, False: 코드)
+        """
+        is_comment_list = []
+        in_block = False
+        
+        for line in lines:
+            is_comment, in_block = CommentDetector.is_comment_line_java(line, in_block)
+            is_comment_list.append(is_comment)
+        
+        return is_comment_list
+    
+    @staticmethod
+    def mark_comment_lines_xml(lines: List[str]) -> List[bool]:
+        """
+        XML 파일의 모든 주석 라인 표시
+        
+        Args:
+            lines: 파일의 모든 라인
+            
+        Returns:
+            주석 여부 리스트 (True: 주석, False: 코드)
+        """
+        is_comment_list = []
+        in_block = False
+        
+        for line in lines:
+            is_comment, in_block = CommentDetector.is_comment_line_xml(line, in_block)
+            is_comment_list.append(is_comment)
+        
+        return is_comment_list
+
+
 class JavaSearcher:
     """Java 파일 검색 클래스"""
     
@@ -256,7 +472,14 @@ class JavaSearcher:
                 content = java_file.read_text(encoding='utf-8', errors='ignore')
                 lines = content.splitlines()
                 
+                # 주석 라인 표시
+                comment_marks = CommentDetector.mark_comment_lines_java(lines)
+                
                 for i, line in enumerate(lines, 1):
+                    # 주석 라인은 스킵
+                    if comment_marks[i - 1]:
+                        continue
+                    
                     if not matcher.is_match(line):
                         continue
                     
@@ -273,6 +496,7 @@ class JavaSearcher:
                         'file': rel_path,
                         'class': class_name,
                         'method': method_name,
+                        'line_number': i,
                         'line': line.strip()
                     })
                     
@@ -335,7 +559,14 @@ class XmlSearcher:
                 content = xml_file.read_text(encoding='utf-8', errors='ignore')
                 lines = content.splitlines()
                 
+                # 주석 라인 표시
+                comment_marks = CommentDetector.mark_comment_lines_xml(lines)
+                
                 for i, line in enumerate(lines, 1):
+                    # 주석 라인은 스킵
+                    if comment_marks[i - 1]:
+                        continue
+                    
                     line_lower = line.lower()
                     
                     # 빠른 체크
@@ -352,6 +583,7 @@ class XmlSearcher:
                             'file': rel_path,
                             'procedure': proc_name,
                             'function': func_name,
+                            'line_number': i,
                             'line': line.strip()
                         })
                         
@@ -424,15 +656,15 @@ class ReportWriter:
         try:
             with file_path.open('w', encoding=encoding, newline='', errors='replace') as f:
                 writer = csv.writer(f)
-                writer.writerow(['Procedure/Function name', '파일 경로', '클래스', '메서드', '호출한 라인 텍스트'])
+                writer.writerow(['Procedure/Function name', '파일 경로', '클래스', '메서드', '호출한 라인 번호', '호출한 라인 텍스트'])
                 
                 seen: Set[tuple] = set()
                 for r in results:
-                    key = (r['item'], r['file'], r['class'], r['method'], r['line'])
+                    key = (r['item'], r['file'], r['class'], r['method'], r['line_number'], r['line'])
                     if key not in seen:
                         seen.add(key)
                         clean_line = ReportWriter._clean_line(r['line'])
-                        writer.writerow([r['item'], r['file'], r['class'], r['method'], f'"{clean_line}"'])
+                        writer.writerow([r['item'], r['file'], r['class'], r['method'], r['line_number'], f'"{clean_line}"'])
             
             logging.info(f"java.csv 작성 완료: {len(seen)}개 항목")
             
@@ -449,15 +681,15 @@ class ReportWriter:
         try:
             with file_path.open('w', encoding=encoding, newline='', errors='replace') as f:
                 writer = csv.writer(f)
-                writer.writerow(['Procedure/Function name', '파일 경로', '프로시저명', '함수명', '호출한 라인 텍스트'])
+                writer.writerow(['Procedure/Function name', '파일 경로', '프로시저명', '함수명', '호출한 라인 번호', '호출한 라인 텍스트'])
                 
                 seen: Set[tuple] = set()
                 for r in results:
-                    key = (r['item'], r['file'], r['procedure'], r['function'], r['line'])
+                    key = (r['item'], r['file'], r['procedure'], r['function'], r['line_number'], r['line'])
                     if key not in seen:
                         seen.add(key)
                         clean_line = ReportWriter._clean_line(r['line'])
-                        writer.writerow([r['item'], r['file'], r['procedure'], r['function'], f'"{clean_line}"'])
+                        writer.writerow([r['item'], r['file'], r['procedure'], r['function'], r['line_number'], f'"{clean_line}"'])
             
             logging.info(f"SqlXml.csv 작성 완료: {len(seen)}개 항목")
             
@@ -595,13 +827,19 @@ def main():
         java_results = []
         xml_results = []
         
+        # 프로그레스바 생성
+        progress_bar = ProgressBar(total=len(items), desc="Item 검색 중", bar_length=25)
+        
         for idx, item in enumerate(items, 1):
-            if idx % 20 == 0:
-                progress = (idx / len(items)) * 100
-                logging.info(f"진행 중: {idx}/{len(items)} ({progress:.1f}%)")
-            
+            # 검색 수행
             java_results.extend(java_searcher.search(item))
             xml_results.extend(xml_searcher.search(item))
+            
+            # 프로그레스바 업데이트
+            progress_bar.update(n=1, item_name=item)
+        
+        # 프로그레스바 종료
+        progress_bar.close()
         
         logging.info(f"\n검색 완료!")
         logging.info(f"Java 결과: {len(java_results)}개")
